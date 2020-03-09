@@ -112,6 +112,7 @@ static int sandbox(void *sandbox_arg) {
 	}
 	if (arg_proxy_addr_any)
 		a[last++] = "--proxy-addr-any";
+
 	if (arg_server) {
 		char *cmd;
 		if (asprintf(&cmd, "--server=%s", arg_server) == -1)
@@ -228,10 +229,12 @@ void frontend(void) {
 	int shm_keepalive_cnt = 0;
 
 	// start resolvers
+	server_get();
 	int i;
-	for (i = 0; i < arg_resolvers; i++)
+	for (i = 0; i < arg_resolvers; i++){
+		printf("Hello\n");
 		start_sandbox(i);
-
+	}
 	// handle SIGCHLD in pselect loop
 	sigset_t sigmask, empty_mask;
 	struct sigaction sa;
@@ -315,7 +318,7 @@ void frontend(void) {
 			t.tv_nsec = 0;
 			timestamp = time(NULL);
 		}
-		else if (got_SIGCHLD) {
+		else if (got_SIGCHLD) { // indicates a child process died
 			pid_t pid = -1;;
 			int status;
 			got_SIGCHLD = 0;

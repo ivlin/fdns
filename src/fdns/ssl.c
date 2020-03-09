@@ -192,8 +192,10 @@ int ssl_dns(uint8_t *msg, int cnt) {
 	DnsServer *srv = server_get();
 	assert(srv);
 
-	if (ssl == NULL || ssl_state != SSL_OPEN)
+	if (ssl == NULL || ssl_state != SSL_OPEN){
+		printf("SSL state fail\n");
 		return 0;
+	}
 
 	assert(bio);
 	assert(ctx);
@@ -242,7 +244,165 @@ int ssl_dns(uint8_t *msg, int cnt) {
 	// check 200 OK
 	char *ptr = strstr(buf, "200 OK");
 	if (!ptr) {
-		rlogprintf("Warning: HTTP error, 200 OK not received\n");
+		rlogprintf("[Single] Warning: HTTP error, 200 OK not received\n");
+		printf("**************\n%s\n**************\n", buf);
+		fflush(0);
+		goto errout;
+	}
+
+	// look for the end of http header
+	ptr = strstr(buf, "\r\n\r\n");
+	if (!ptr) {
+		rlogprintf("Warning: cannot parse HTTPS response, didn't recieve a full http header\n");
+		printf("**************\n%s\n**************\n", buf);
+		fflush(0);
+		goto errout;
+	}
+	ptr += 4; // length of "\r\n\r\n"
+	ptrdiff_t hlen = ptr - buf; // +4 is the length of \r\n\r\n
+	*(ptr - 1) = 0;
+	if (arg_debug)
+		printf("(%d) http header:\n%s", arg_id, buf);
+
+	// look for Content-Length:
+	char *contlen = "Content-Length: ";
+	ptr = strcasestr(buf, contlen);
+	int datalen = 0;
+	if (!ptr) {
+		rlogprintf("Warning: cannot parse HTTPS response, content-length missing\n");
+		print_mem((uint8_t *) buf, len);
+		goto errout;
+	}
+	else {
+		ptr += strlen(contlen);
+		sscanf(ptr, "%d", &datalen);
+		if (datalen == 0) // we got a "Content-lenght: 0"; this is probably a HTTP error
+			return 0;
+	}
+
+	// do we need to read more data?
+	int totallen = (int) hlen + datalen;
+	if (arg_debug)
+		printf("(%d) SSL read len %d, totallen %d, datalen %d\n",
+		       arg_id, len, totallen, datalen);
+	if (totallen >= MAXBUF) {
+		rlogprintf("Warning: cannot parse HTTPS response, invalid length\n");
+		print_mem((uint8_t *) buf, len);
+		goto errout;
+	}
+
+	while (len < totallen) {
+		int rv = BIO_read(bio, buf + len, totallen - len);
+		if (arg_debug)
+			printf("(%d) SSL read + %d\n", arg_id, rv);
+		if(rv <= 0) {
+			if(! BIO_should_retry(bio)) {
+				rlogprintf("Error: failed SSL read\n");
+				goto errout;
+			}
+			rv = BIO_read(bio, buf, MAXBUF);
+			if (arg_debug)
+				printf("(%d) SSL read + %d\n", arg_id, rv);
+			if(rv <= 0) {
+				rlogprintf("Error: SSL connection is probably closed\n");
+				goto errout;
+			}
+		}
+
+		len += rv;
+	}
+
+	// copy the response in buf
+	memcpy(msg, buf + len - datalen, datalen);
+	if (arg_debug) {
+		printf("(%d) DNS data:\n", arg_id);
+		print_mem((uint8_t *) buf, datalen);
+		printf("(%d) *** SSL transaction end ***\n", arg_id);
+	}
+
+	//
+	// partial response parsing
+	//
+	if (lint_rx(msg, datalen)) {
+		if (lint_error() == DNSERR_NXDOMAIN) {
+			cache_set_reply(msg, datalen, CACHE_TTL_ERROR);
+			return datalen;
+		}
+
+		logprintf("Error: RX %s\n", lint_err2str());
+		return 0;
+	}
+
+	// cache the response and exit
+	cache_set_reply(msg, datalen, arg_cache_ttl);
+	return datalen;
+
+errout:
+	ssl_close();
+	return 0;
+}
+
+int ssl_dns_pool(const char* domain, uint8_t *msg, int cnt) {
+	assert(msg);
+
+	DnsServer *srv = server_pool_get(domain);
+	assert(srv);
+
+	if (ssl == NULL || ssl_state != SSL_OPEN){
+		printf("SSL state fail\n");
+		return 0;
+	}
+
+	rlogprintf(" ----------------------------\n - Attempting to use resolver %s to resolve domain %s\n ----------------------------\n", srv->name, domain);
+
+	assert(bio);
+	assert(ctx);
+	assert(ssl);
+
+	char buf[MAXBUF];
+	sprintf(buf, srv->request, cnt);
+	int len = strlen(buf);
+	assert(cnt < MAXBUF - len);
+
+	memcpy(buf + len, msg, cnt);
+	len += cnt;
+
+	if (arg_debug)
+		printf("(%d) *** SSL transaction ***\n", arg_id);
+
+	int lentx;
+	if((lentx = BIO_write(bio, buf, len)) <= 0) {
+		if(! BIO_should_retry(bio)) {
+			rlogprintf("Error: failed SSL write, retval %d\n", lentx);
+			goto errout;
+		}
+		if((lentx = BIO_write(bio, buf, len)) <= 0) {
+			rlogprintf("Error: failed SSL write, retval %d\n", lentx);
+			goto errout;
+		}
+	}
+
+	if (arg_debug)
+		printf("(%d) SSL write %d/%d bytes\n", arg_id, len, lentx);
+
+	len = BIO_read(bio, buf, MAXBUF);
+	if(len <= 0) {
+		if(! BIO_should_retry(bio)) {
+			rlogprintf("Error: failed SSL read, retval %d\n", len);
+			goto errout;
+		}
+		len = BIO_read(bio, buf, MAXBUF);
+		if(len <= 0) {
+			rlogprintf("Error: failed SSL read, retval %d\n", len);
+			goto errout;
+		}
+	}
+	buf[len] = '\0';
+
+	// check 200 OK
+	char *ptr = strstr(buf, "200 OK");
+	if (!ptr) {
+		rlogprintf("[Pool] Warning: HTTP error, 200 OK not received\n");
 		printf("**************\n%s\n**************\n", buf);
 		fflush(0);
 		goto errout;
@@ -352,5 +512,7 @@ void ssl_keepalive(void) {
 	int len = 33;
 
 	memcpy(buf, msg, len);
-	ssl_dns(buf, 33);
+	if (ssl_state == SSL_OPEN){
+		ssl_dns(buf, 33);
+	}
 }

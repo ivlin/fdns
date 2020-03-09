@@ -242,6 +242,8 @@ int main(int argc, char **argv) {
 	}
 
 	// initialize the active server structure
+	char test[10];
+	strcpy(test, "test");
 	DnsServer *s = server_get();
 	assert(s);
 	assert(arg_server);

@@ -226,7 +226,7 @@ void resolver(void) {
 
 
 		//***********************************************
-		// data coming from the local network
+		// data coming from the local network   - - Respond to request here
 		//***********************************************
 		if (FD_ISSET(slocal, &fds)) {
 			struct sockaddr_in addr_client;
@@ -241,8 +241,10 @@ void resolver(void) {
 			stats.changed = 1;
 
 			// filter incoming requests
+			char* domain = NULL;
 			DnsDestination dest;
-			uint8_t *r = dns_parser(buf, &len, &dest);
+			uint8_t *r = dns_parser_domain(buf, &len, &dest, &domain);
+			rlogprintf(" ----------------------------\n - Received request for domain %s\n ----------------------------\n", domain);
 
 			assert(dest < DEST_MAX);
 			if (dest == DEST_DROP) {
@@ -280,14 +282,29 @@ void resolver(void) {
 
 			// attempt to send the data over SSL; the request is not stored in the database
 			assert(dest == DEST_SSL);
+
+
+			/*
+			Custom Start
+			*/
+			rlogprintf("Sending SSL for %s\n",domain);
+			if (ssl_state == SSL_OPEN){
+				ssl_close();
+			}
+
+			/*
+			Custom End
+			*/
 			int ssl_len;
 			timetrace_start();
-			if (ssl_state == SSL_OPEN)
-				ssl_len = ssl_dns(buf, len);
+			//if (ssl_state == SSL_OPEN)
+			ssl_len = ssl_dns_pool(domain, buf, len);
 
 			// a HTTP error from SSL, with no DNS data comming back
-			if (ssl_state == SSL_OPEN && ssl_len == 0)
+			if (ssl_state == SSL_OPEN && ssl_len == 0){
+				rlogprintf("HTTP error from SSL with no DNS data\n");
 				continue;	// drop the packet
+			}
 			// good packet from SSL
 			else if (ssl_state == SSL_OPEN && ssl_len > 0) {
 				stats.ssl_pkts_timetrace += timetrace_end();
@@ -307,6 +324,7 @@ void resolver(void) {
 			}
 			// send the data to the remote fallback server; store the request in the database
 			else {
+				rlogprintf("Using DoUDP for %s\n", domain);
 				stats.fallback++;
 				stats.changed = 1;
 				if (!dns_over_udp)

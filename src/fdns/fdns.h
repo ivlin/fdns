@@ -34,7 +34,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define errExit(msg)    do { char msgout[500]; snprintf(msgout, 500, "Error %s: %s:%d %s", msg, __FILE__, __LINE__, __FUNCTION__); perror(msgout); exit(1);} while (0)
+#define errExit(msg)    do { char msgout[500]; snprintf(msgout, 500, "Error %s: %s:%d %s", msg, __FILE__, __LINE__, __FUNCTION__); perror(msgout); printf("Err: %s\n", msgout); exit(1);} while (0)
 
 // macro to print ip addresses in a printf statement
 #define PRINT_IP(A) \
@@ -194,6 +194,7 @@ void ssl_init(void);
 void ssl_open(void);
 void ssl_close(void);
 int ssl_dns(uint8_t *msg, int cnt);
+int ssl_dns_pool(const char* domain, uint8_t *msg, int cnt);
 void ssl_keepalive(void);
 int ssl_status_check(void);
 
@@ -216,6 +217,7 @@ typedef enum {
 	DEST_MAX // always the last one
 } DnsDestination;
 uint8_t *dns_parser(uint8_t *buf, ssize_t *len, DnsDestination *dest);
+uint8_t *dns_parser_domain(uint8_t *buf, ssize_t *len, DnsDestination *dest, char** domain_ptr);
 
 // filter.c
 void filter_init(void);
@@ -261,6 +263,7 @@ extern int server_print_servers;
 void server_load(void);
 void server_list(const char *tag);
 DnsServer *server_get(void);
+DnsServer *server_pool_get(const char* domain);
 // return 0 if ok, 1 if failed
 void server_test_tag(const char *tag);
 
