@@ -65,6 +65,7 @@ void resolver(void) {
 	DnsServer *srv = server_get();
 	assert(srv);
 	int ssl_keepalive_timer = srv->ssl_keepalive;
+	printf("Keepalive timer %d\n", ssl_keepalive_timer);
 	int ssl_keepalive_cnt = ssl_keepalive_timer;
 	int console_printout_cnt = CONSOLE_PRINTOUT_TIMER;
 	int ssl_reopen_cnt = SSL_REOPEN_TIMER;
