@@ -242,15 +242,14 @@ int main(int argc, char **argv) {
 	}
 
 	// initialize the active server structure
-	char test[10];
-	strcpy(test, "test");
-	DnsServer *s = server_get();
+	DnsServer *s = server_pool_get("test");
 	assert(s);
 	assert(arg_server);
 
 	// start the frontend or the resolver
 	if (arg_id != -1) {
 		assert(arg_fd != -1);
+		logprintf("PID: %d\n", getpid());
 		resolver();
 	}
 	else {

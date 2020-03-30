@@ -584,6 +584,67 @@ errout:
 	fprintf(stderr, "Error: cannot connect to server %s\n", arg_server);
 	exit(1);
 }
+// get a pointer to a server in the pool
+// if pool was not set, use the current zone as a tag
+DnsServer *server_pool_get_2(const char* domain) {
+	if (spool_len <= 1){
+		load_list();
+		if (!slist) {
+			fprintf(stderr, "Error: the server list %s is empty", PATH_ETC_SERVER_LIST);
+			exit(1);
+		}
+		// update arg_server
+		assert(fdns_zone);
+		arg_server = strdup(fdns_zone);
+		// arg_server is in mallocated memory
+
+		// initialize s->active
+		server_list(arg_server);
+		assert(slist);
+
+		int cnt = 0;
+		DnsServer *s = slist;
+		while (s) {
+			if (s->active)
+				cnt++;
+			s = s->next;
+		}
+		printf("Finished loading spool with %s - contains %d resolvers\n", arg_server, cnt);
+		if (cnt == 0)
+			goto errout;
+
+		printf("[1] Reloading resolver pool\n");
+		spool = (DnsServer*)malloc(cnt*sizeof(DnsServer));
+		s = slist;
+		spool_len = 0;
+		for (int ind=0; s; s=s->next){
+			if (s->active){ // need to copy it to ensure it is on all threads
+				memcpy(&spool[ind],s,sizeof(DnsServer));
+				ind++;
+				spool_len++;
+			}
+		}
+	}
+
+	printf("%d servers - %s\n", spool_len, arg_server);
+
+	int index = (int)(djb2(domain)) % spool_len;
+
+	arg_server = arg_server = strdup(spool[index].name);
+	scurrent = &spool[index];
+
+	if (ssl_state != SSL_OPEN) {
+		ssl_open();
+		ssl_keepalive();
+	}
+
+	printf("Server_pool_get returning %s\n", arg_server);
+	return scurrent;
+errout:
+	printf("Connect failed for %s\n", arg_server);
+	fprintf(stderr, "Error: cannot connect to server %s\n", arg_server);
+	exit(1);
+}
 
 void server_test_tag(const char *tag)  {
 	server_list(tag);
