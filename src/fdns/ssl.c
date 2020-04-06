@@ -487,6 +487,7 @@ int ssl_dns_pool(const char* domain, uint8_t *msg, int cnt) {
 	//
 	// partial response parsing
 	//
+	printf("LOADING INTO DB\n");
 	if (lint_rx(msg, datalen)) {
 		if (lint_error() == DNSERR_NXDOMAIN) {
 			cache_set_reply(msg, datalen, CACHE_TTL_ERROR);
@@ -497,11 +498,13 @@ int ssl_dns_pool(const char* domain, uint8_t *msg, int cnt) {
 		return 0;
 	}
 
+	printf("LOADING INTO DB PART 2\n");
 	// cache the response and exit
 	cache_set_reply(msg, datalen, arg_cache_ttl);
 	return datalen;
 
 errout:
+	rlogprintf("End of ssl_dns_pool\n");
 	ssl_close();
 	return 0;
 }

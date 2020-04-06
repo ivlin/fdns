@@ -227,7 +227,7 @@ void resolver(void) {
 
 
 		//***********************************************
-		// data coming from the local network   - - Respond to request here
+		// data coming from the local network  - Respond to request here
 		//***********************************************
 		if (FD_ISSET(slocal, &fds)) {
 			struct sockaddr_in addr_client;
@@ -256,8 +256,11 @@ void resolver(void) {
 			else if (dest == DEST_LOCAL) {
 				assert(r);
 
+				rlogprintf("DEST_LOCAL\n");
+
 				// send the loopback response
 				len = sendto(slocal, r, len, 0, (struct sockaddr *) &addr_client, addr_client_len);
+				
 				if(arg_debug)
 					printf("len %ld, errno %d\n", len, errno);
 				if (len == -1) // todo: parse errno - EAGAIN
@@ -268,6 +271,8 @@ void resolver(void) {
 
 			else if (dest == DEST_FORWARDING) {
 				assert(fwd_active);
+
+				rlogprintf("DEST_FWD\n");
 				errno = 0;
 				len = sendto(fwd_active->sock, buf, len, 0, (struct sockaddr *) &fwd_active->saddr, fwd_active->slen);
 				if(arg_debug)
