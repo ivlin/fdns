@@ -34,7 +34,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define errExit(msg)    do { char msgout[500]; snprintf(msgout, 500, "Error %s: %s:%d %s", msg, __FILE__, __LINE__, __FUNCTION__); perror(msgout); printf("Err: %s\n", msgout); exit(1);} while (0)
+#define errExit(msg)  \
+	do { char msgout[500]; \
+		snprintf(msgout, 500, "Error %s: %s:%d %s", msg, __FILE__, __LINE__, __FUNCTION__); \
+		perror(msgout); \
+		printf("Err: %s\n", msgout); \
+		exit(1);} \
+	while (0)
 
 // macro to print ip addresses in a printf statement
 #define PRINT_IP(A) \
@@ -264,6 +270,7 @@ void server_load(void);
 void server_list(const char *tag);
 DnsServer *server_get(void);
 DnsServer *server_pool_get(const char* domain);
+DnsServer *server_pool_get_2(const char* domain);
 // return 0 if ok, 1 if failed
 void server_test_tag(const char *tag);
 

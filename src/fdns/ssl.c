@@ -142,6 +142,8 @@ void ssl_open(void) {
 		}
 	}
 
+
+	rlogprintf("Verifying certificates\n");
 	bio = BIO_new_ssl_connect(ctx);
 	BIO_get_ssl(bio, &ssl);
 	SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
@@ -158,6 +160,7 @@ void ssl_open(void) {
 		return;
 	}
 
+	rlogprintf("Verifying certificates\n");
 	int val;
 	if ((val = SSL_get_verify_result(ssl)) != X509_V_OK) {
 		rlogprintf("Error: cannot handle certificate verification (error %d), shutting down...\n", val);
@@ -345,8 +348,11 @@ errout:
 int ssl_dns_pool(const char* domain, uint8_t *msg, int cnt) {
 	assert(msg);
 
+	rlogprintf(" ----------------------------\n - Attempting to use resolve domain %s\n ----------------------------\n",domain);
 	DnsServer *srv = server_pool_get(domain);
+	rlogprintf(" ----------------------------\n - Using server %s\n ----------------------------\n",srv->name);
 	assert(srv);
+	rlogprintf(" ----------------------------\n - Using server %s\n ----------------------------\n",srv->name);
 
 	if (ssl == NULL || ssl_state != SSL_OPEN){
 		printf("SSL state fail\n");
@@ -512,6 +518,7 @@ void ssl_keepalive(void) {
 	int len = 33;
 
 	memcpy(buf, msg, len);
+	
 	if (ssl_state == SSL_OPEN){
 		ssl_dns(buf, 33);
 	}

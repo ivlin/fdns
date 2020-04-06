@@ -20,7 +20,7 @@
 #include <time.h>
 int arg_argc = 0;
 int arg_debug = 0;
-int arg_resolvers = RESOLVERS_CNT_DEFAULT;
+int arg_resolvers = 2;//RESOLVERS_CNT_DEFAULT;
 int arg_id = -1;
 int arg_fd = -1;
 int arg_nofilter = 0;
@@ -241,8 +241,9 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	// initialize the active server structure
-	DnsServer *s = server_pool_get("test");
+	fprintf(stderr, "\n- \n- \n- \nRELOADING RESOLVER with arg server as %s\n- \n- \n- \n", arg_server);
+	arg_server = NULL;
+	DnsServer *s = server_get();
 	assert(s);
 	assert(arg_server);
 

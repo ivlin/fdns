@@ -445,6 +445,7 @@ DnsServer *server_get(void) {
 			cnt++;
 		s = s->next;
 	}
+	printf("Count: %d\n", cnt);
 	if (cnt == 0)
 		goto errout;
 
@@ -454,11 +455,9 @@ DnsServer *server_get(void) {
 		s = slist;
 		spool_len=0;
 		for (int ind=0; s; s=s->next){
-			if (s->active){ // need to copy it to ensure it is on all threads
-				//scurrent = s;
-				//test_server(s->name);
+			if (s->active){ 
 				memcpy(&spool[ind],s,sizeof(DnsServer));
-				printf("%d: %s\n", ind, spool[ind].name);
+				printf("[get] %d: %s\n", ind, spool[ind].name);
 				ind++;
 				spool_len++;
 			}
@@ -526,7 +525,7 @@ unsigned long djb2(const char *str) {
 // get a pointer to a server in the pool
 // if pool was not set, use the current zone as a tag
 DnsServer *server_pool_get(const char* domain) {
-	if (spool_len <= 1){
+	if (!spool){
 		load_list();
 		if (!slist) {
 			fprintf(stderr, "Error: the server list %s is empty", PATH_ETC_SERVER_LIST);
@@ -552,13 +551,14 @@ DnsServer *server_pool_get(const char* domain) {
 		if (cnt == 0)
 			goto errout;
 
-		printf("[1] Reloading resolver pool\n");
+		rlogprintf("[1] Reloading resolver pool\n");
 		spool = (DnsServer*)malloc(cnt*sizeof(DnsServer));
 		s = slist;
 		spool_len = 0;
 		for (int ind=0; s; s=s->next){
 			if (s->active){ // need to copy it to ensure it is on all threads
 				memcpy(&spool[ind],s,sizeof(DnsServer));
+				printf("[pool_get] %d: %s\n", ind, spool[ind].name);
 				ind++;
 				spool_len++;
 			}
@@ -566,85 +566,39 @@ DnsServer *server_pool_get(const char* domain) {
 	}
 
 	rlogprintf("%d servers - %s\n", spool_len, arg_server);
+	//printf("Domain %s, pool size %d\n", domain, spool_len);
+	uint index = ((uint)djb2(domain)) % spool_len;
+	
+	for (int ind=0; ind<spool_len; ind++){
+		rlogprintf("[%d] %s\n", ind, spool[ind].name);
+	}
+	rlogprintf("a ind %d - %s\n", index, spool[index].name);
 
-	int index = (int)(djb2(domain)) % spool_len;
-
-	arg_server = arg_server = strdup(spool[index].name);
+	char* stemp = malloc(sizeof(char)*strlen(spool[index].name));
+	strcpy(stemp, spool[index].name);
+	arg_server = stemp;
+	//arg_server = strdup(spool[index].name);
+	rlogprintf("b\n");
 	scurrent = &spool[index];
-
+	rlogprintf("c\n");
 	if (ssl_state != SSL_OPEN) {
+		rlogprintf("Opening server %s\n", arg_server);
 		ssl_open();
+		rlogprintf("Keeping alive server %s\n", arg_server);
 		ssl_keepalive();
 	}
+	else{
+		printf("ssl already opened\n");
+	}
 
-	rlogprintf("Server_pool_get returning %s\n", arg_server);
+	rlogprintf("Server_pool_get returning [%s]\n", arg_server);
 	return scurrent;
 errout:
 	rlogprintf("Connect failed for %s\n", arg_server);
 	fprintf(stderr, "Error: cannot connect to server %s\n", arg_server);
 	exit(1);
 }
-// get a pointer to a server in the pool
-// if pool was not set, use the current zone as a tag
-DnsServer *server_pool_get_2(const char* domain) {
-	if (spool_len <= 1){
-		load_list();
-		if (!slist) {
-			fprintf(stderr, "Error: the server list %s is empty", PATH_ETC_SERVER_LIST);
-			exit(1);
-		}
-		// update arg_server
-		assert(fdns_zone);
-		arg_server = strdup(fdns_zone);
-		// arg_server is in mallocated memory
 
-		// initialize s->active
-		server_list(arg_server);
-		assert(slist);
-
-		int cnt = 0;
-		DnsServer *s = slist;
-		while (s) {
-			if (s->active)
-				cnt++;
-			s = s->next;
-		}
-		printf("Finished loading spool with %s - contains %d resolvers\n", arg_server, cnt);
-		if (cnt == 0)
-			goto errout;
-
-		printf("[1] Reloading resolver pool\n");
-		spool = (DnsServer*)malloc(cnt*sizeof(DnsServer));
-		s = slist;
-		spool_len = 0;
-		for (int ind=0; s; s=s->next){
-			if (s->active){ // need to copy it to ensure it is on all threads
-				memcpy(&spool[ind],s,sizeof(DnsServer));
-				ind++;
-				spool_len++;
-			}
-		}
-	}
-
-	printf("%d servers - %s\n", spool_len, arg_server);
-
-	int index = (int)(djb2(domain)) % spool_len;
-
-	arg_server = arg_server = strdup(spool[index].name);
-	scurrent = &spool[index];
-
-	if (ssl_state != SSL_OPEN) {
-		ssl_open();
-		ssl_keepalive();
-	}
-
-	printf("Server_pool_get returning %s\n", arg_server);
-	return scurrent;
-errout:
-	printf("Connect failed for %s\n", arg_server);
-	fprintf(stderr, "Error: cannot connect to server %s\n", arg_server);
-	exit(1);
-}
 
 void server_test_tag(const char *tag)  {
 	server_list(tag);

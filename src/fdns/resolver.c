@@ -300,14 +300,22 @@ void resolver(void) {
 			timetrace_start();
 			//if (ssl_state == SSL_OPEN)
 			ssl_len = ssl_dns_pool(domain, buf, len);
+			//ssl_len = ssl_dns(buf, len);
 
+			if (ssl_state == SSL_OPEN){
+				rlogprintf("SSL is open\n");
+			}
+			else{
+				rlogprintf("SSL is not open\n");	
+			}
 			// a HTTP error from SSL, with no DNS data comming back
 			if (ssl_state == SSL_OPEN && ssl_len == 0){
-				rlogprintf("HTTP error from SSL with no DNS data\n");
+				rlogprintf("RSP No data\n");
 				continue;	// drop the packet
 			}
 			// good packet from SSL
 			else if (ssl_state == SSL_OPEN && ssl_len > 0) {
+				rlogprintf("RSP Good data\n");
 				stats.ssl_pkts_timetrace += timetrace_end();
 				stats.ssl_pkts_cnt++;
 				dns_over_udp = 0;
@@ -325,7 +333,7 @@ void resolver(void) {
 			}
 			// send the data to the remote fallback server; store the request in the database
 			else {
-				rlogprintf("Using DoUDP for %s\n", domain);
+				rlogprintf("RSP no SSL, Using DoUDP for %s\n", domain);
 				stats.fallback++;
 				stats.changed = 1;
 				if (!dns_over_udp)
