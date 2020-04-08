@@ -38,7 +38,7 @@ typedef struct cache_entry_t {
 #define MAX_HASH_ARRAY 256
 static CacheEntry *clist[MAX_HASH_ARRAY];
 static char cname[CACHE_NAME_LEN + 1] = {0};
-static int cname_type;	// 0 - ipv4, 1 - ipv6
+static int cname_type=0;	// 0 - ipv4, 1 - ipv6
 static uint8_t creply[MAX_REPLY];
 
 static inline void clean_entry(CacheEntry *ptr) {
@@ -66,14 +66,28 @@ void cache_init(void) {
 
 void cache_set_name(const char *name, int ipv6) {
 	assert(name);
+	printf("Setting name to %s\n", name);
 	strncpy(cname, name, CACHE_NAME_LEN);
 	cname[CACHE_NAME_LEN] = '\0';
 	cname_type = ipv6;
 }
 
+char* cache_get_name() {
+	char* blah = (char*)malloc(sizeof(char)*100);
+	strcpy(blah, cname);
+	return blah;
+}
+
+int cache_get_name_type() {
+	return cname_type;
+}
+
 void cache_set_reply(uint8_t *reply, ssize_t len, int ttl) {
 	assert(reply);
 	assert(ttl > 0);
+	
+	printf("Setting reply for name %s\n", cname);
+
 	if (len == 0 || len > MAX_REPLY || *cname == '\0') {
 		*cname = '\0';
 		return;
@@ -102,6 +116,7 @@ void cache_set_reply(uint8_t *reply, ssize_t len, int ttl) {
 
 uint8_t *cache_check(uint16_t id, const char *name, ssize_t *lenptr, int ipv6) {
 	assert(name);
+	printf("checking for name %s\n", name);
 	int h = hash(name, ipv6);
 	CacheEntry *ptr = clist[h];
 	while (ptr) {

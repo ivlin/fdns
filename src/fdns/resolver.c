@@ -138,6 +138,7 @@ void resolver(void) {
 
 			// reopen SSL connection
 			if (ssl_state == SSL_CLOSED) {
+				rlogprintf("SSL conn was closed, reopening now\n");
 				if (--ssl_reopen_cnt <= 0) {
 					ssl_open();
 					ssl_reopen_cnt = SSL_REOPEN_TIMER;
@@ -164,7 +165,7 @@ void resolver(void) {
 				fprintf(stderr, "Error: resolver process going down, frontend keepalive failed\n");
 				exit(1);
 			}
-
+			
 			// database cleanup
 			dnsdb_timeout();
 			cache_timeout();
@@ -244,6 +245,20 @@ void resolver(void) {
 			// filter incoming requests
 			char* domain = NULL;
 			DnsDestination dest;
+			
+			/*
+			Custom Start
+			*/
+			rlogprintf("Sending SSL for %s\n",domain);
+			
+			if (ssl_state == SSL_OPEN){
+				printf("Closing SSL\n");
+				ssl_close();
+			}
+			/*
+			Custom End
+			*/
+
 			uint8_t *r = dns_parser_domain(buf, &len, &dest, &domain);
 			rlogprintf(" ----------------------------\n - Received request for domain %s\n ----------------------------\n", domain);
 
@@ -257,7 +272,21 @@ void resolver(void) {
 				assert(r);
 
 				rlogprintf("DEST_LOCAL\n");
+				
+				printf("(%d) Cache DNS data:\n", arg_id);
+				print_mem((uint8_t *) buf, 150);
 
+				/*
+				char* test=r;
+				for (int i=0; i<40; i++){
+					if (i%8==0){
+						printf("\n");
+					}
+					printf("%10x", *test);
+					test++;
+				}
+				rlogprintf("--\n");
+				*/
 				// send the loopback response
 				len = sendto(slocal, r, len, 0, (struct sockaddr *) &addr_client, addr_client_len);
 				
@@ -290,17 +319,7 @@ void resolver(void) {
 			assert(dest == DEST_SSL);
 
 
-			/*
-			Custom Start
-			*/
-			rlogprintf("Sending SSL for %s\n",domain);
-			if (ssl_state == SSL_OPEN){
-				ssl_close();
-			}
 
-			/*
-			Custom End
-			*/
 			int ssl_len;
 			timetrace_start();
 			//if (ssl_state == SSL_OPEN)
@@ -361,6 +380,7 @@ void resolver(void) {
 		// data coming from a forwarding DNS server
 		//***********************************************
 		if (fwd) {
+			rlogprintf("Recieveing fwded data\n");
 			Forwarder *f = fwd;
 			while (f) {
 				if (FD_ISSET(f->sock, &fds)) {

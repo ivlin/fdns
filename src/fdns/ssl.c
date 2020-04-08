@@ -179,6 +179,7 @@ void ssl_open(void) {
 }
 
 void ssl_close(void) {
+	rlogprintf("Going to close conn\n");
 	int rv = SSL_shutdown(ssl);
 	if (rv == 0)
 		SSL_shutdown(ssl);
@@ -491,6 +492,7 @@ int ssl_dns_pool(const char* domain, uint8_t *msg, int cnt) {
 	if (lint_rx(msg, datalen)) {
 		if (lint_error() == DNSERR_NXDOMAIN) {
 			cache_set_reply(msg, datalen, CACHE_TTL_ERROR);
+			printf("Partial load\n");
 			return datalen;
 		}
 
@@ -504,7 +506,6 @@ int ssl_dns_pool(const char* domain, uint8_t *msg, int cnt) {
 	return datalen;
 
 errout:
-	rlogprintf("End of ssl_dns_pool\n");
 	ssl_close();
 	return 0;
 }

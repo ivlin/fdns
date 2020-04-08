@@ -166,7 +166,7 @@ uint8_t *dns_parser(uint8_t *buf, ssize_t *lenptr, DnsDestination *dest) {
 		uint8_t *rv = cache_check(h->id, q->domain, lenptr, (q->type == 0x1c) ? 1 : 0);
 		if (rv) {
 			stats.cached++;
-			rlogprintf("Request: %s%s, cached\n", q->domain, (q->type == 0x1c) ? " (ipv6)" : "");
+			rlogprintf("Request: %s%s, [a] cached\n", q->domain, (q->type == 0x1c) ? " (ipv6)" : "");
 			*dest = DEST_LOCAL;
 			return rv;
 		}
@@ -323,9 +323,12 @@ uint8_t *dns_parser_domain(uint8_t *buf, ssize_t *lenptr, DnsDestination *dest, 
 		uint8_t *rv = cache_check(h->id, q->domain, lenptr, (q->type == 0x1c) ? 1 : 0);
 		if (rv) {
 			stats.cached++;
-			rlogprintf("Request: %s%s, cached\n", q->domain, (q->type == 0x1c) ? " (ipv6)" : "");
+			rlogprintf("Request: %s%s, [b] cached\n", q->domain, (q->type == 0x1c) ? " (ipv6)" : "");
 			*dest = DEST_LOCAL;
 			return rv;
+		}
+		else {
+			rlogprintf("Cache_check failed\n");
 		}
 
 		// set the stage for caching the reply

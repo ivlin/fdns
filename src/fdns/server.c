@@ -575,17 +575,32 @@ DnsServer *server_pool_get(const char* domain) {
 	rlogprintf("a ind %d - %s\n", index, spool[index].name);
 
 	char* stemp = malloc(sizeof(char)*strlen(spool[index].name));
+	
 	strcpy(stemp, spool[index].name);
+	rlogprintf("~~~~~~server should be %s, instead it is %s\n", stemp, arg_server);
 	arg_server = stemp;
-	//arg_server = strdup(spool[index].name);
-	rlogprintf("b\n");
 	scurrent = &spool[index];
 	rlogprintf("c\n");
+
 	if (ssl_state != SSL_OPEN) {
-		rlogprintf("Opening server %s\n", arg_server);
+		//char* dtemp = strdup(cache_get_name());
+		
+		printf("Before the breaks\n");
+		rlogprintf("Opening server %s \n", arg_server);
+		/*		
+		char dtemp[100];
+		int dtype=0;
+		char* asd= cache_get_name();
+		printf("1.15 the breaks - saved %s with %d\n", asd, dtype);
+		*/
+		int dtype = cache_get_name_type();
 		ssl_open();
+		//printf("1.5 the breaks - saved %s with %d\n", dtemp, dtype);
 		rlogprintf("Keeping alive server %s\n", arg_server);
 		ssl_keepalive();
+		printf("Between the breaks\n");
+		cache_set_name(domain, dtype);
+		//free(dtemp);
 	}
 	else{
 		printf("ssl already opened\n");
