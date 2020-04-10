@@ -349,11 +349,8 @@ errout:
 int ssl_dns_pool(const char* domain, uint8_t *msg, int cnt) {
 	assert(msg);
 
-	rlogprintf(" ----------------------------\n - Attempting to use resolve domain %s\n ----------------------------\n",domain);
 	DnsServer *srv = server_pool_get(domain);
-	rlogprintf(" ----------------------------\n - Using server %s\n ----------------------------\n",srv->name);
 	assert(srv);
-	rlogprintf(" ----------------------------\n - Using server %s\n ----------------------------\n",srv->name);
 
 	if (ssl == NULL || ssl_state != SSL_OPEN){
 		printf("SSL state fail\n");

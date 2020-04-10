@@ -457,7 +457,7 @@ DnsServer *server_get(void) {
 		for (int ind=0; s; s=s->next){
 			if (s->active){ 
 				memcpy(&spool[ind],s,sizeof(DnsServer));
-				printf("[get] %d: %s\n", ind, spool[ind].name);
+				printf("%d: %s\n", ind, spool[ind].name);
 				ind++;
 				spool_len++;
 			}
@@ -558,7 +558,6 @@ DnsServer *server_pool_get(const char* domain) {
 		for (int ind=0; s; s=s->next){
 			if (s->active){ // need to copy it to ensure it is on all threads
 				memcpy(&spool[ind],s,sizeof(DnsServer));
-				printf("[pool_get] %d: %s\n", ind, spool[ind].name);
 				ind++;
 				spool_len++;
 			}
@@ -566,13 +565,8 @@ DnsServer *server_pool_get(const char* domain) {
 	}
 
 	rlogprintf("%d servers - %s\n", spool_len, arg_server);
-	//uint index = ((uint)djb2(domain)) % spool_len;
+	uint index = ((uint)djb2(domain)) % spool_len;
 	uint index = 0;
-	
-	for (int ind=0; ind<spool_len; ind++){
-		rlogprintf("[%d] %s\n", ind, spool[ind].name);
-	}
-	rlogprintf("a ind %d - %s\n", index, spool[index].name);
 
 	char* stemp = malloc(sizeof(char)*strlen(spool[index].name));
 	
@@ -587,7 +581,6 @@ DnsServer *server_pool_get(const char* domain) {
 		cache_set_name(domain, dtype);
 	}
 
-	rlogprintf("Server_pool_get returning [%s]\n", arg_server);
 	return scurrent;
 errout:
 	rlogprintf("Connect failed for %s\n", arg_server);

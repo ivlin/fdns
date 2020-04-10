@@ -65,7 +65,6 @@ void resolver(void) {
 	DnsServer *srv = server_get();
 	assert(srv);
 	int ssl_keepalive_timer = srv->ssl_keepalive;
-	printf("Keepalive timer %d\n", ssl_keepalive_timer);
 	int ssl_keepalive_cnt = ssl_keepalive_timer;
 	int console_printout_cnt = CONSOLE_PRINTOUT_TIMER;
 	int ssl_reopen_cnt = SSL_REOPEN_TIMER;
@@ -249,7 +248,6 @@ void resolver(void) {
 			/*
 			Custom Start
 			*/
-			rlogprintf("Sending SSL for %s\n",domain);
 			
 			if (ssl_state == SSL_OPEN){
 				printf("Closing SSL\n");
@@ -270,23 +268,10 @@ void resolver(void) {
 
 			else if (dest == DEST_LOCAL) {
 				assert(r);
-
-				rlogprintf("DEST_LOCAL\n");
 				
 				printf("(%d) Cache DNS data:\n", arg_id);
 				print_mem((uint8_t *) buf, 150);
 
-				/*
-				char* test=r;
-				for (int i=0; i<40; i++){
-					if (i%8==0){
-						printf("\n");
-					}
-					printf("%10x", *test);
-					test++;
-				}
-				rlogprintf("--\n");
-				*/
 				// send the loopback response
 				len = sendto(slocal, r, len, 0, (struct sockaddr *) &addr_client, addr_client_len);
 				
@@ -301,7 +286,6 @@ void resolver(void) {
 			else if (dest == DEST_FORWARDING) {
 				assert(fwd_active);
 
-				rlogprintf("DEST_FWD\n");
 				errno = 0;
 				len = sendto(fwd_active->sock, buf, len, 0, (struct sockaddr *) &fwd_active->saddr, fwd_active->slen);
 				if(arg_debug)
@@ -322,24 +306,16 @@ void resolver(void) {
 
 			int ssl_len;
 			timetrace_start();
-			//if (ssl_state == SSL_OPEN)
+
 			ssl_len = ssl_dns_pool(domain, buf, len);
 			//ssl_len = ssl_dns(buf, len);
 
-			if (ssl_state == SSL_OPEN){
-				rlogprintf("SSL is open\n");
-			}
-			else{
-				rlogprintf("SSL is not open\n");	
-			}
 			// a HTTP error from SSL, with no DNS data comming back
 			if (ssl_state == SSL_OPEN && ssl_len == 0){
-				rlogprintf("RSP No data\n");
 				continue;	// drop the packet
 			}
 			// good packet from SSL
 			else if (ssl_state == SSL_OPEN && ssl_len > 0) {
-				rlogprintf("RSP Good data\n");
 				stats.ssl_pkts_timetrace += timetrace_end();
 				stats.ssl_pkts_cnt++;
 				dns_over_udp = 0;
@@ -357,7 +333,6 @@ void resolver(void) {
 			}
 			// send the data to the remote fallback server; store the request in the database
 			else {
-				rlogprintf("RSP no SSL, Using DoUDP for %s\n", domain);
 				stats.fallback++;
 				stats.changed = 1;
 				if (!dns_over_udp)
@@ -380,7 +355,6 @@ void resolver(void) {
 		// data coming from a forwarding DNS server
 		//***********************************************
 		if (fwd) {
-			rlogprintf("Recieveing fwded data\n");
 			Forwarder *f = fwd;
 			while (f) {
 				if (FD_ISSET(f->sock, &fds)) {
