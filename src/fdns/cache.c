@@ -66,7 +66,6 @@ void cache_init(void) {
 
 void cache_set_name(const char *name, int ipv6) {
 	assert(name);
-	printf("Setting name to %s\n", name);
 	strncpy(cname, name, CACHE_NAME_LEN);
 	cname[CACHE_NAME_LEN] = '\0';
 	cname_type = ipv6;
@@ -86,8 +85,6 @@ void cache_set_reply(uint8_t *reply, ssize_t len, int ttl) {
 	assert(reply);
 	assert(ttl > 0);
 	
-	printf("Setting reply for name %s\n", cname);
-
 	if (len == 0 || len > MAX_REPLY || *cname == '\0') {
 		*cname = '\0';
 		return;
