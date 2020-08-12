@@ -1,9 +1,14 @@
 # Firejail DNS-over-HTTPS Proxy Server
+
 DNS over HTTPS (DoH) is a next-generation communication protocol on track on becoming a major Internet standard (<a href="https://datatracker.ietf.org/doc/rfc8484/">RFC 8484</a>). By adding strong encryption and authentication to the good old DNS protocol, DoH tries to eliminate some of the biggest problems DNS had from the beginning: censorship, surveillance, and man-in-the-middle attacks.
 
 FDNS was designed to run as a local DoH proxy on a Linux desktop, or as a server for a small network. Lean and mean, it protects the computers against some of the most common cyber threats, all while improving the privacy and the system performance.
 
 FDNS is written in C and licensed under GPLv3. The number one job is privacy. We use <b>only</b> DoH services from non-logging providers, while preferring small operators such as open-source enthusiasts and privacy-oriented non-profit organizations.
+
+## Notes on this fork
+This fork significantly alters some of the structures of the original fdns code. It implements the k-resolver strategy described in the following paper:
+<a href="https://arxiv.org/abs/2001.08901"> K-resolver: Towards Decentralizing Encrypted DNS Resolution</a>. It divides DNS lookup load across multiple possible resolvers. The resolver list is not kept up-to-date - when it contacts a nonfunctional resolver, it will fallback to standard DNS.
 
 <div style="height:20px;">&nbsp;</div>
 
