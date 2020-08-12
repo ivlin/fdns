@@ -234,7 +234,6 @@ void frontend(void) {
 	for (i = 0; i < arg_resolvers; i++){
 		printf("Starting sandbox for arg_id=%d\n", i);
 		start_sandbox(i);
-		printf("Resolver [%d] has PID %d\n", i, w[i].pid);
 	}
 	// handle SIGCHLD in pselect loop
 	sigset_t sigmask, empty_mask;

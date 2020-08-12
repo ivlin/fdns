@@ -20,7 +20,7 @@
 #include <time.h>
 int arg_argc = 0;
 int arg_debug = 0;
-int arg_resolvers = 2;//RESOLVERS_CNT_DEFAULT;
+int arg_resolvers = RESOLVERS_CNT_DEFAULT;
 int arg_id = -1;
 int arg_fd = -1;
 int arg_nofilter = 0;
@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
-	fprintf(stderr, "\n- \n- \n- \nRELOADING RESOLVER with arg server as %s\n- \n- \n- \n", arg_server);
+	//Reloading with different arg server
 	arg_server = NULL;
 	DnsServer *s = server_get();
 	assert(s);
@@ -250,7 +250,6 @@ int main(int argc, char **argv) {
 	// start the frontend or the resolver
 	if (arg_id != -1) {
 		assert(arg_fd != -1);
-		logprintf("PID: %d\n", getpid());
 		resolver();
 	}
 	else {
